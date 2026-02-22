@@ -5,7 +5,7 @@
  * 非 Tauri 环境（dev 模式）回退到 Web Notification API。
  */
 
-const isTauri = typeof window !== 'undefined' && '__TAURI__' in window
+import { isTauri } from './env'
 
 /**
  * 发送系统通知

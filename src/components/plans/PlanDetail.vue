@@ -142,7 +142,7 @@ const props = defineProps<{ planId: number }>()
 defineEmits(['back'])
 
 let api: any = null
-const isTauri = typeof window !== 'undefined' && '__TAURI__' in window
+import { isTauri } from '../../utils/env'
 
 const plan = ref<PlanInfo | null>(null)
 const days = ref<PlanDayDetail[]>([])

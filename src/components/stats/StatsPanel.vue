@@ -124,7 +124,7 @@ import { ref, computed, onMounted } from 'vue'
 import type { WritingStats, HeatmapEntry } from '../../types'
 import AppIcon from '../icons/AppIcon.vue'
 
-const isTauri = typeof window !== 'undefined' && '__TAURI__' in window
+import { isTauri } from '../../utils/env'
 let api: any = null
 const toastMsg = ref('')
 

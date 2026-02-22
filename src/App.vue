@@ -30,7 +30,7 @@ const editorRef = ref<InstanceType<typeof WritingEditor> | null>(null);
 const saveToast = ref('');
 const showRitual = ref(false);
 
-const isTauri = typeof window !== 'undefined' && '__TAURI__' in window;
+import { isTauri } from './utils/env';
 let apiModule: any = null;
 
 const saveWriting = async () => {

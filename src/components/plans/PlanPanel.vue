@@ -167,7 +167,7 @@ import type { WritingPlan } from '../../types'
 import PlanDetail from './PlanDetail.vue'
 
 let api: any = null
-const isTauri = typeof window !== 'undefined' && '__TAURI__' in window
+import { isTauri } from '../../utils/env'
 
 const plans = ref<WritingPlan[]>([])
 const showImport = ref(false)

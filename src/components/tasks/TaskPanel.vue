@@ -158,7 +158,7 @@ import { requestPermission, notifyTodayTasks, notifyTaskCompleted } from '../../
 
 // 由于开发阶段可能不在 Tauri 环境中运行，提供 mock fallback
 let api: any = null
-const isTauri = typeof window !== 'undefined' && '__TAURI__' in window
+import { isTauri } from '../../utils/env'
 
 const tasks = ref<Task[]>([])
 const showAddForm = ref(false)
