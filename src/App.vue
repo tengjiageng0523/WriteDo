@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, computed, onMounted, onBeforeUnmount } from 'vue';
 import WritingEditor from './components/editor/WritingEditor.vue';
+import TaskPanel from './components/tasks/TaskPanel.vue';
 import SettingsPanel from './components/SettingsPanel.vue';
 import type { CustomFont } from './components/SettingsPanel.vue';
 
@@ -253,9 +254,13 @@ onBeforeUnmount(() => {
         </div>
       </div>
       
+      <!-- 待办任务面板 -->
+      <TaskPanel v-else-if="activeTab === 'tasks'" />
+
+      <!-- 其他面板占位 -->
       <div class="content-wrapper" style="max-width:100%" v-else>
         <div class="flex items-center justify-center" style="flex:1">
-          <p class="text-tertiary">正在开发中...</p>
+          <p class="text-tertiary">{{ activeTab === 'plans' ? '写作计划' : '数据统计' }} — 开发中...</p>
         </div>
       </div>
     </main>
