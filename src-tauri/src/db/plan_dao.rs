@@ -49,34 +49,38 @@ pub fn get_all_plans(conn: &Connection) -> AppResult<Vec<WritingPlan>> {
     Ok(plans)
 }
 
-/// 获取计划详情（含每日条目 + 完成统计）
+/// 获取计划详情（含每日条目 + 写作完成状态）
 pub fn get_plan_with_days(conn: &Connection, plan_id: i64) -> AppResult<PlanWithDays> {
     let plan = get_plan_by_id(conn, plan_id)?;
 
+    // LEFT JOIN writings 获取每日写作状态
     let mut stmt = conn.prepare(
-        "SELECT id, plan_id, day_number, title, prompt, scheduled_date
-         FROM plan_days WHERE plan_id = ?1 ORDER BY day_number ASC"
+        "SELECT pd.id, pd.plan_id, pd.day_number, pd.title, pd.prompt, pd.scheduled_date,
+                CASE WHEN w.id IS NOT NULL THEN 1 ELSE 0 END as is_completed,
+                COALESCE(w.word_count, 0) as word_count,
+                w.title as writing_title,
+                w.id as writing_id
+         FROM plan_days pd
+         LEFT JOIN writings w ON w.plan_day_id = pd.id
+         WHERE pd.plan_id = ?1
+         ORDER BY pd.day_number ASC"
     )?;
     let days = stmt.query_map(params![plan_id], |row| {
-        Ok(PlanDay {
-            id: Some(row.get(0)?),
+        Ok(PlanDayDetail {
+            id: row.get(0)?,
             plan_id: row.get(1)?,
             day_number: row.get(2)?,
             title: row.get(3)?,
             prompt: row.get(4)?,
             scheduled_date: row.get(5)?,
+            is_completed: row.get::<_, i32>(6)? != 0,
+            word_count: row.get(7)?,
+            writing_title: row.get(8)?,
+            writing_id: row.get(9)?,
         })
     })?.collect::<Result<Vec<_>, _>>()?;
 
-    // 统计已完成天数（有对应写作记录的天数）
-    let completed_days: i32 = conn.query_row(
-        "SELECT COUNT(DISTINCT pd.day_number)
-         FROM plan_days pd
-         INNER JOIN writings w ON w.plan_day_id = pd.id
-         WHERE pd.plan_id = ?1",
-        params![plan_id],
-        |row| row.get(0),
-    )?;
+    let completed_days = days.iter().filter(|d| d.is_completed).count() as i32;
 
     Ok(PlanWithDays {
         plan,
@@ -205,6 +209,47 @@ pub fn delete_plan(conn: &Connection, plan_id: i64) -> AppResult<()> {
     let affected = conn.execute("DELETE FROM writing_plans WHERE id = ?1", params![plan_id])?;
     if affected == 0 {
         return Err(AppError::NotFound(format!("计划 ID {} 不存在", plan_id)));
+    }
+    Ok(())
+}
+
+/// 更新每日条目
+pub fn update_plan_day(conn: &Connection, req: &UpdatePlanDayRequest) -> AppResult<()> {
+    let mut updates = Vec::new();
+    let mut values: Vec<Box<dyn rusqlite::types::ToSql>> = Vec::new();
+
+    if let Some(ref title) = req.title {
+        updates.push("title = ?");
+        values.push(Box::new(title.clone()));
+    }
+    if let Some(ref prompt) = req.prompt {
+        updates.push("prompt = ?");
+        values.push(Box::new(prompt.clone()));
+    }
+
+    if updates.is_empty() {
+        return Ok(());
+    }
+
+    values.push(Box::new(req.id));
+    let sql = format!(
+        "UPDATE plan_days SET {} WHERE id = ?",
+        updates.join(", ")
+    );
+
+    let params_refs: Vec<&dyn rusqlite::types::ToSql> = values.iter().map(|v| v.as_ref()).collect();
+    let affected = conn.execute(&sql, params_refs.as_slice())?;
+    if affected == 0 {
+        return Err(AppError::NotFound(format!("条目 ID {} 不存在", req.id)));
+    }
+    Ok(())
+}
+
+/// 删除每日条目
+pub fn delete_plan_day(conn: &Connection, day_id: i64) -> AppResult<()> {
+    let affected = conn.execute("DELETE FROM plan_days WHERE id = ?1", params![day_id])?;
+    if affected == 0 {
+        return Err(AppError::NotFound(format!("条目 ID {} 不存在", day_id)));
     }
     Ok(())
 }

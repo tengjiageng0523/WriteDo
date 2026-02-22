@@ -59,6 +59,33 @@ pub struct PlanDay {
     pub scheduled_date: Option<String>,
 }
 
+/// 每日条目详情（含写作完成状态）
+#[derive(Debug, Clone, Serialize)]
+pub struct PlanDayDetail {
+    pub id: i64,
+    pub plan_id: i64,
+    pub day_number: i32,
+    pub title: String,
+    pub prompt: String,
+    pub scheduled_date: Option<String>,
+    /// 是否已完成写作
+    pub is_completed: bool,
+    /// 写作字数
+    pub word_count: i32,
+    /// 写作标题
+    pub writing_title: Option<String>,
+    /// 关联的 writing ID
+    pub writing_id: Option<i64>,
+}
+
+/// 更新每日条目请求
+#[derive(Debug, Deserialize)]
+pub struct UpdatePlanDayRequest {
+    pub id: i64,
+    pub title: Option<String>,
+    pub prompt: Option<String>,
+}
+
 /// 导入写作计划的请求（JSON 格式）
 #[derive(Debug, Deserialize)]
 pub struct ImportPlanRequest {
@@ -112,7 +139,7 @@ pub struct UpdatePlanRequest {
 pub struct PlanWithDays {
     #[serde(flatten)]
     pub plan: WritingPlan,
-    pub days: Vec<PlanDay>,
+    pub days: Vec<PlanDayDetail>,
     /// 已完成的天数
     pub completed_days: i32,
 }

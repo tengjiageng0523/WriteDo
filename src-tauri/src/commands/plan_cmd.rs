@@ -67,3 +67,17 @@ pub fn delete_plan(db: State<'_, DbState>, plan_id: i64) -> AppResult<()> {
     let conn = db.lock().map_err(|e| crate::errors::AppError::Business(e.to_string()))?;
     plan_dao::delete_plan(&conn, plan_id)
 }
+
+/// 更新每日条目（标题/提示）
+#[tauri::command]
+pub fn update_plan_day(db: State<'_, DbState>, request: UpdatePlanDayRequest) -> AppResult<()> {
+    let conn = db.lock().map_err(|e| crate::errors::AppError::Business(e.to_string()))?;
+    plan_dao::update_plan_day(&conn, &request)
+}
+
+/// 删除每日条目
+#[tauri::command]
+pub fn delete_plan_day(db: State<'_, DbState>, day_id: i64) -> AppResult<()> {
+    let conn = db.lock().map_err(|e| crate::errors::AppError::Business(e.to_string()))?;
+    plan_dao::delete_plan_day(&conn, day_id)
+}

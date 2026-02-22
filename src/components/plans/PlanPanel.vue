@@ -1,5 +1,14 @@
 <template>
   <div class="plan-panel">
+    <!-- 详情视图 -->
+    <PlanDetail
+      v-if="selectedPlanId"
+      :planId="selectedPlanId"
+      @back="goBackToList"
+    />
+
+    <!-- 列表视图 -->
+    <template v-else>
     <!-- 顶部标题栏 -->
     <header class="panel-header">
       <div>
@@ -16,17 +25,17 @@
 
     <!-- 计划列表 -->
     <div class="plan-list" v-if="plans.length">
-      <div class="plan-card" v-for="plan in plans" :key="plan.id ?? 0" :class="'status-' + plan.status">
+      <div class="plan-card" v-for="plan in plans" :key="plan.id ?? 0" :class="'status-' + plan.status" @click="selectPlan(plan)">
         <div class="plan-card-header">
           <h3 class="plan-name">{{ plan.name }}</h3>
           <div class="plan-header-right">
             <span class="plan-status-badge" :class="plan.status">{{ statusLabel(plan.status) }}</span>
             <!-- 操作菜单 -->
             <div class="plan-actions">
-              <button class="action-btn" @click="openEdit(plan)" title="编辑">
+              <button class="action-btn" @click.stop="openEdit(plan)" title="编辑">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
               </button>
-              <button class="action-btn action-btn-danger" @click="confirmDelete(plan)" title="删除">
+              <button class="action-btn action-btn-danger" @click.stop="confirmDelete(plan)" title="删除">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
               </button>
             </div>
@@ -43,19 +52,19 @@
           <span class="plan-date">{{ formatDate(plan.start_date) }} 开始</span>
           <!-- 状态切换按钮 -->
           <div class="status-actions">
-            <button v-if="plan.status === 'active'" class="status-action-btn pause" @click="changePlanStatus(plan, 'paused')" title="暂停">
+            <button v-if="plan.status === 'active'" class="status-action-btn pause" @click.stop="changePlanStatus(plan, 'paused')" title="暂停">
               <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
               暂停
             </button>
-            <button v-if="plan.status === 'paused'" class="status-action-btn resume" @click="changePlanStatus(plan, 'active')" title="恢复">
+            <button v-if="plan.status === 'paused'" class="status-action-btn resume" @click.stop="changePlanStatus(plan, 'active')" title="恢复">
               <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
               恢复
             </button>
-            <button v-if="plan.status !== 'completed'" class="status-action-btn complete" @click="changePlanStatus(plan, 'completed')" title="标记完成">
+            <button v-if="plan.status !== 'completed'" class="status-action-btn complete" @click.stop="changePlanStatus(plan, 'completed')" title="标记完成">
               <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
               完成
             </button>
-            <button v-if="plan.status === 'completed'" class="status-action-btn resume" @click="changePlanStatus(plan, 'active')" title="重新开始">
+            <button v-if="plan.status === 'completed'" class="status-action-btn resume" @click.stop="changePlanStatus(plan, 'active')" title="重新开始">
               <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
               重启
             </button>
@@ -148,12 +157,14 @@
     <transition name="toast">
       <div class="toast" v-if="toastMsg">{{ toastMsg }}</div>
     </transition>
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import type { WritingPlan } from '../../types'
+import PlanDetail from './PlanDetail.vue'
 
 let api: any = null
 const isTauri = typeof window !== 'undefined' && '__TAURI__' in window
@@ -165,6 +176,17 @@ const importContent = ref('')
 const startDate = ref('')
 const importError = ref('')
 const toastMsg = ref('')
+
+// 详情页导航
+const selectedPlanId = ref<number | null>(null)
+
+const selectPlan = (plan: WritingPlan) => {
+  if (plan.id) selectedPlanId.value = plan.id
+}
+const goBackToList = async () => {
+  selectedPlanId.value = null
+  await loadPlans()
+}
 
 // 编辑
 const showEditDialog = ref(false)
@@ -372,6 +394,7 @@ onMounted(loadPlans)
   background: var(--bg-surface); border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg); padding: 20px;
   border-left: 4px solid var(--accent-primary); transition: transform 0.2s, box-shadow 0.2s;
+  cursor: pointer;
 }
 .plan-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
 .plan-card.status-completed { border-left-color: #10b981; opacity: 0.8; }

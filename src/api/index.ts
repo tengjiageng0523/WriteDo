@@ -96,6 +96,16 @@ export async function deletePlan(planId: number): Promise<void> {
     return invoke('delete_plan', { planId });
 }
 
+/** 更新每日条目 */
+export async function updatePlanDay(request: { id: number; title?: string; prompt?: string }): Promise<void> {
+    return invoke('update_plan_day', { request });
+}
+
+/** 删除每日条目 */
+export async function deletePlanDay(dayId: number): Promise<void> {
+    return invoke('delete_plan_day', { dayId });
+}
+
 // ==================== 写作记录 API ====================
 
 /** 保存写作记录 */

@@ -111,6 +111,8 @@ pub fn run() {
             plan_cmd::update_plan,
             plan_cmd::update_plan_status,
             plan_cmd::delete_plan,
+            plan_cmd::update_plan_day,
+            plan_cmd::delete_plan_day,
             // 写作记录
             writing_cmd::save_writing,
             writing_cmd::get_writings,
