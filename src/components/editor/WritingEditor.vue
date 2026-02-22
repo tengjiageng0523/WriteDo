@@ -62,6 +62,18 @@
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="4"></line><line x1="5" y1="11" x2="12" y2="4"></line><line x1="19" y1="11" x2="12" y2="4"></line></svg>
         </button>
       </div>
+
+      <div class="toolbar-spacer"></div>
+
+      <div class="toolbar-group">
+        <button 
+          @click="$emit('save')" 
+          class="btn-icon save-btn" title="保存 (Ctrl+S)"
+          :class="{ 'has-content': charCount > 0 }"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+        </button>
+      </div>
     </div>
 
     <!-- Tiptap Editor Content -->
@@ -83,6 +95,11 @@
         {{ charCount }} 字 · {{ formatDuration(writingDuration) }}
       </div>
     </div>
+
+    <!-- 字数里程碑动画 -->
+    <transition name="milestone">
+      <div class="milestone-toast" v-if="milestoneMsg">{{ milestoneMsg }}</div>
+    </transition>
   </div>
 </template>
 
@@ -104,7 +121,14 @@ const props = defineProps<{
   typewriterPosition?: number
 }>()
 
-const emit = defineEmits(['update:modelValue', 'toggle-focus-mode', 'toggle-typewriter-mode'])
+const emit = defineEmits(['update:modelValue', 'toggle-focus-mode', 'toggle-typewriter-mode', 'save'])
+
+// 暴露给父组件
+defineExpose({
+  getCharCount: () => charCount.value,
+  getDuration: () => writingDuration.value,
+  getContent: () => editor.value?.getHTML() || '',
+})
 
 // === 编辑器样式（由父组件通过 props 控制） ===
 const editorStyle = computed(() => ({
@@ -135,6 +159,32 @@ const markTyping = () => {
   activeTimer = setTimeout(() => { isUserActive.value = false }, 4000)
 }
 
+// === 字数里程碑 ===
+const milestoneMsg = ref('')
+const lastMilestone = ref(0)
+const milestones = [100, 200, 500, 1000, 1500, 2000, 3000, 5000]
+
+const checkMilestone = (count: number) => {
+  for (const m of milestones) {
+    if (count >= m && lastMilestone.value < m) {
+      lastMilestone.value = m
+      milestoneMsg.value = m >= 1000 ? `🎉 ${m / 1000}k 字！太棒了！` : `✨ ${m} 字！继续加油！`
+      setTimeout(() => { milestoneMsg.value = '' }, 2500)
+      break
+    }
+  }
+}
+
+// === Ctrl+S 快捷键 ===
+const onKeyDown = (e: KeyboardEvent) => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+    e.preventDefault()
+    emit('save')
+  }
+}
+onMounted(() => { window.addEventListener('keydown', onKeyDown) })
+onBeforeUnmount(() => { window.removeEventListener('keydown', onKeyDown) })
+
 // === Tiptap ===
 const editor = useEditor({
   content: props.modelValue || '',
@@ -146,7 +196,9 @@ const editor = useEditor({
   ],
   onUpdate: ({ editor }) => {
     emit('update:modelValue', editor.getHTML())
-    charCount.value = editor.getText().replace(/\s/g, '').length
+    const newCount = editor.getText().replace(/\s/g, '').length
+    charCount.value = newCount
+    checkMilestone(newCount)
     markTyping()
 
     if (props.isTypewriterMode) scrollToCaret(editor)
@@ -302,4 +354,24 @@ watch(() => props.modelValue, (newVal) => {
   0%, 100% { transform: scale(1); box-shadow: 0 0 6px 2px rgba(16, 185, 129, 0.5); }
   50% { transform: scale(1.3); box-shadow: 0 0 12px 4px rgba(16, 185, 129, 0.3); }
 }
+
+.toolbar-spacer { flex: 1; }
+
+.save-btn { color: var(--text-tertiary); }
+.save-btn.has-content { color: var(--text-secondary); }
+.save-btn:hover { color: var(--accent-primary); }
+
+/* 里程碑 toast */
+.milestone-toast {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff; padding: 14px 32px; border-radius: 16px;
+  font-size: 1.1rem; font-weight: 600; letter-spacing: 0.02em;
+  box-shadow: 0 8px 32px rgba(99, 102, 241, 0.35);
+  z-index: 20; pointer-events: none;
+}
+.milestone-enter-active { transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.milestone-leave-active { transition: all 0.3s ease; }
+.milestone-enter-from { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+.milestone-leave-to { opacity: 0; transform: translate(-50%, -50%) translateY(-20px); }
 </style>

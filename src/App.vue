@@ -23,6 +23,48 @@ const content = ref('');
 const isFocusMode = ref(false);
 const isTypewriterMode = ref(false);
 const isFullscreen = ref(false);
+const editorRef = ref<InstanceType<typeof WritingEditor> | null>(null);
+const saveToast = ref('');
+
+const isTauri = typeof window !== 'undefined' && '__TAURI__' in window;
+let apiModule: any = null;
+
+const saveWriting = async () => {
+  const editor = editorRef.value;
+  if (!editor) return;
+  const charCount = editor.getCharCount();
+  const duration = editor.getDuration();
+  const htmlContent = editor.getContent();
+
+  if (charCount === 0) {
+    showSaveToast('没有内容可保存');
+    return;
+  }
+
+  if (isTauri) {
+    try {
+      if (!apiModule) apiModule = await import('./api');
+      await apiModule.saveWriting({
+        title: '今日写作',
+        content: htmlContent,
+        word_count: charCount,
+        duration_seconds: duration,
+      });
+      showSaveToast(`✅ 已保存 (${charCount} 字)`);
+    } catch (e) {
+      console.error('保存失败', e);
+      showSaveToast('❌ 保存失败');
+    }
+  } else {
+    // mock 模式
+    showSaveToast(`✅ 已保存 (${charCount} 字·${Math.floor(duration / 60)}分钟)`);
+  }
+};
+
+const showSaveToast = (msg: string) => {
+  saveToast.value = msg;
+  setTimeout(() => { saveToast.value = ''; }, 2500);
+};
 
 // === 设置面板 ===
 const showSettings = ref(false);
@@ -238,6 +280,7 @@ onBeforeUnmount(() => {
         </section>
 
         <WritingEditor 
+          ref="editorRef"
           v-model="content"
           :is-focus-mode="isFocusMode"
           :is-typewriter-mode="isTypewriterMode"
@@ -247,6 +290,7 @@ onBeforeUnmount(() => {
           :typewriter-position="typewriterPosition"
           @toggle-focus-mode="isFocusMode = !isFocusMode"
           @toggle-typewriter-mode="isTypewriterMode = !isTypewriterMode"
+          @save="saveWriting"
         />
 
         <div class="resize-handle-right" @mousedown="onResizeStart">
@@ -286,6 +330,11 @@ onBeforeUnmount(() => {
       @add-custom-font="addCustomFont"
       @remove-custom-font="removeCustomFont"
     />
+
+    <!-- 保存 Toast -->
+    <transition name="save-toast">
+      <div class="save-toast" v-if="saveToast">{{ saveToast }}</div>
+    </transition>
   </div>
 </template>
 
@@ -364,4 +413,17 @@ onBeforeUnmount(() => {
   max-width: 100% !important; /* 全屏时取消 max-width 限制，靠 padding 控制边距 */
   padding-top: 48px;
 }
+
+.save-toast {
+  position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%);
+  background: var(--text-primary); color: var(--bg-base);
+  padding: 10px 24px; border-radius: 20px;
+  font-size: 0.9rem; font-weight: 500;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  z-index: 200;
+}
+.save-toast-enter-active { transition: all 0.3s ease; }
+.save-toast-leave-active { transition: all 0.3s ease; }
+.save-toast-enter-from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+.save-toast-leave-to { opacity: 0; transform: translateX(-50%) translateY(20px); }
 </style>
