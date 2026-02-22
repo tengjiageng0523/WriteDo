@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, computed, onMounted, onBeforeUnmount } from 'vue';
 import WritingEditor from './components/editor/WritingEditor.vue';
+import RitualTransition from './components/editor/RitualTransition.vue';
 import TaskPanel from './components/tasks/TaskPanel.vue';
 import SettingsPanel from './components/SettingsPanel.vue';
 import type { CustomFont } from './components/SettingsPanel.vue';
@@ -25,6 +26,7 @@ const isTypewriterMode = ref(false);
 const isFullscreen = ref(false);
 const editorRef = ref<InstanceType<typeof WritingEditor> | null>(null);
 const saveToast = ref('');
+const showRitual = ref(false);
 
 const isTauri = typeof window !== 'undefined' && '__TAURI__' in window;
 let apiModule: any = null;
@@ -181,14 +183,21 @@ const onResizeEnd = () => { isDragging.value = false; };
 const checkFullscreenStatus = () => { isFullscreen.value = !!document.fullscreenElement; };
 const toggleImmersiveMode = async () => {
   if (!document.fullscreenElement) {
-    await document.documentElement.requestFullscreen().catch(() => {});
-    isFocusMode.value = true;
-    isTypewriterMode.value = true;
+    // 先播放仪式感动画
+    showRitual.value = true;
   } else {
     await document.exitFullscreen().catch(() => {});
     isFocusMode.value = false;
     isTypewriterMode.value = false;
   }
+};
+
+// 仪式动画完成后进入全屏
+const onRitualComplete = async () => {
+  showRitual.value = false;
+  await document.documentElement.requestFullscreen().catch(() => {});
+  isFocusMode.value = true;
+  isTypewriterMode.value = true;
 };
 
 // 全屏模式下的内容区样式（用设置中的 padding 值）
@@ -335,6 +344,9 @@ onBeforeUnmount(() => {
     <transition name="save-toast">
       <div class="save-toast" v-if="saveToast">{{ saveToast }}</div>
     </transition>
+
+    <!-- 写作仪式感过渡 -->
+    <RitualTransition :visible="showRitual" @complete="onRitualComplete" />
   </div>
 </template>
 
