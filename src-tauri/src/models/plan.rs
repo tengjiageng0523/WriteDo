@@ -98,6 +98,15 @@ fn default_difficulty() -> String {
     "beginner".to_string()
 }
 
+/// 更新写作计划的请求
+#[derive(Debug, Deserialize)]
+pub struct UpdatePlanRequest {
+    pub id: i64,
+    pub name: Option<String>,
+    pub theme: Option<String>,
+    pub start_date: Option<String>,
+}
+
 /// 计划 + 每日条目的完整视图（用于前端展示）
 #[derive(Debug, Clone, Serialize)]
 pub struct PlanWithDays {

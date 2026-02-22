@@ -86,6 +86,11 @@ export async function updatePlanStatus(planId: number, status: string): Promise<
     return invoke('update_plan_status', { planId, status });
 }
 
+/** 更新计划基本信息 */
+export async function updatePlan(request: { id: number; name?: string; theme?: string; start_date?: string }): Promise<WritingPlan> {
+    return invoke('update_plan', { request });
+}
+
 /** 删除计划 */
 export async function deletePlan(planId: number): Promise<void> {
     return invoke('delete_plan', { planId });

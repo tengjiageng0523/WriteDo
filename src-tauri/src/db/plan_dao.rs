@@ -152,6 +152,42 @@ pub fn get_today_writing_task(conn: &Connection) -> AppResult<Option<TodayWritin
     }
 }
 
+/// 更新计划基本信息
+pub fn update_plan(conn: &Connection, req: &UpdatePlanRequest) -> AppResult<WritingPlan> {
+    let mut updates = Vec::new();
+    let mut values: Vec<Box<dyn rusqlite::types::ToSql>> = Vec::new();
+
+    if let Some(ref name) = req.name {
+        updates.push("name = ?");
+        values.push(Box::new(name.clone()));
+    }
+    if let Some(ref theme) = req.theme {
+        updates.push("theme = ?");
+        values.push(Box::new(theme.clone()));
+    }
+    if let Some(ref start_date) = req.start_date {
+        updates.push("start_date = ?");
+        values.push(Box::new(start_date.clone()));
+    }
+
+    if updates.is_empty() {
+        return get_plan_by_id(conn, req.id);
+    }
+
+    values.push(Box::new(req.id));
+    let sql = format!(
+        "UPDATE writing_plans SET {} WHERE id = ?",
+        updates.join(", ")
+    );
+
+    let params_refs: Vec<&dyn rusqlite::types::ToSql> = values.iter().map(|v| v.as_ref()).collect();
+    let affected = conn.execute(&sql, params_refs.as_slice())?;
+    if affected == 0 {
+        return Err(AppError::NotFound(format!("计划 ID {} 不存在", req.id)));
+    }
+    get_plan_by_id(conn, req.id)
+}
+
 /// 更新计划状态
 pub fn update_plan_status(conn: &Connection, plan_id: i64, status: PlanStatus) -> AppResult<()> {
     let affected = conn.execute(

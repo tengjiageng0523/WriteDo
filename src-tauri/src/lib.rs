@@ -108,6 +108,7 @@ pub fn run() {
             plan_cmd::get_today_writing,
             plan_cmd::import_plan,
             plan_cmd::generate_plan,
+            plan_cmd::update_plan,
             plan_cmd::update_plan_status,
             plan_cmd::delete_plan,
             // 写作记录

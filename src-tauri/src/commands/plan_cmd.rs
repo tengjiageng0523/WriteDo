@@ -47,6 +47,13 @@ pub fn generate_plan(db: State<'_, DbState>, request: GeneratePlanRequest) -> Ap
     plan_dao::create_plan(&conn, &import_req)
 }
 
+/// 更新计划基本信息（名称/主题/日期）
+#[tauri::command]
+pub fn update_plan(db: State<'_, DbState>, request: UpdatePlanRequest) -> AppResult<WritingPlan> {
+    let conn = db.lock().map_err(|e| crate::errors::AppError::Business(e.to_string()))?;
+    plan_dao::update_plan(&conn, &request)
+}
+
 /// 更新计划状态
 #[tauri::command]
 pub fn update_plan_status(db: State<'_, DbState>, plan_id: i64, status: String) -> AppResult<()> {
