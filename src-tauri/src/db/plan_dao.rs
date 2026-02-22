@@ -1,0 +1,174 @@
+//! 写作计划数据库操作
+
+use rusqlite::{params, Connection};
+use chrono::NaiveDate;
+use crate::errors::{AppError, AppResult};
+use crate::models::plan::*;
+
+/// 创建写作计划（含每日条目）
+pub fn create_plan(conn: &Connection, plan: &ImportPlanRequest) -> AppResult<i64> {
+    conn.execute(
+        "INSERT INTO writing_plans (name, theme, start_date, total_days) VALUES (?1, ?2, ?3, ?4)",
+        params![plan.name, plan.theme, plan.start_date, plan.days.len() as i32],
+    )?;
+
+    let plan_id = conn.last_insert_rowid();
+    let start = NaiveDate::parse_from_str(&plan.start_date, "%Y-%m-%d")
+        .map_err(|e| AppError::Business(format!("日期格式无效: {}", e)))?;
+
+    for day_item in &plan.days {
+        let scheduled = start + chrono::Duration::days((day_item.day - 1) as i64);
+        conn.execute(
+            "INSERT INTO plan_days (plan_id, day_number, title, prompt, scheduled_date) VALUES (?1, ?2, ?3, ?4, ?5)",
+            params![plan_id, day_item.day, day_item.title, day_item.prompt, scheduled.to_string()],
+        )?;
+    }
+
+    Ok(plan_id)
+}
+
+/// 获取所有写作计划（不含每日条目详情）
+pub fn get_all_plans(conn: &Connection) -> AppResult<Vec<WritingPlan>> {
+    let mut stmt = conn.prepare(
+        "SELECT id, name, theme, start_date, total_days, status, created_at
+         FROM writing_plans ORDER BY created_at DESC"
+    )?;
+
+    let plans = stmt.query_map([], |row| {
+        Ok(WritingPlan {
+            id: Some(row.get(0)?),
+            name: row.get(1)?,
+            theme: row.get(2)?,
+            start_date: row.get(3)?,
+            total_days: row.get(4)?,
+            status: PlanStatus::from_str(&row.get::<_, String>(5)?),
+            created_at: row.get(6)?,
+        })
+    })?.collect::<Result<Vec<_>, _>>()?;
+
+    Ok(plans)
+}
+
+/// 获取计划详情（含每日条目 + 完成统计）
+pub fn get_plan_with_days(conn: &Connection, plan_id: i64) -> AppResult<PlanWithDays> {
+    let plan = get_plan_by_id(conn, plan_id)?;
+
+    let mut stmt = conn.prepare(
+        "SELECT id, plan_id, day_number, title, prompt, scheduled_date
+         FROM plan_days WHERE plan_id = ?1 ORDER BY day_number ASC"
+    )?;
+    let days = stmt.query_map(params![plan_id], |row| {
+        Ok(PlanDay {
+            id: Some(row.get(0)?),
+            plan_id: row.get(1)?,
+            day_number: row.get(2)?,
+            title: row.get(3)?,
+            prompt: row.get(4)?,
+            scheduled_date: row.get(5)?,
+        })
+    })?.collect::<Result<Vec<_>, _>>()?;
+
+    // 统计已完成天数（有对应写作记录的天数）
+    let completed_days: i32 = conn.query_row(
+        "SELECT COUNT(DISTINCT pd.day_number)
+         FROM plan_days pd
+         INNER JOIN writings w ON w.plan_day_id = pd.id
+         WHERE pd.plan_id = ?1",
+        params![plan_id],
+        |row| row.get(0),
+    )?;
+
+    Ok(PlanWithDays {
+        plan,
+        days,
+        completed_days,
+    })
+}
+
+/// 根据 ID 获取计划
+fn get_plan_by_id(conn: &Connection, id: i64) -> AppResult<WritingPlan> {
+    let mut stmt = conn.prepare(
+        "SELECT id, name, theme, start_date, total_days, status, created_at
+         FROM writing_plans WHERE id = ?1"
+    )?;
+
+    stmt.query_row(params![id], |row| {
+        Ok(WritingPlan {
+            id: Some(row.get(0)?),
+            name: row.get(1)?,
+            theme: row.get(2)?,
+            start_date: row.get(3)?,
+            total_days: row.get(4)?,
+            status: PlanStatus::from_str(&row.get::<_, String>(5)?),
+            created_at: row.get(6)?,
+        })
+    }).map_err(|_| AppError::NotFound(format!("计划 ID {} 不存在", id)))
+}
+
+/// 获取今日写作任务
+pub fn get_today_writing_task(conn: &Connection) -> AppResult<Option<TodayWritingTask>> {
+    let today = chrono::Local::now().format("%Y-%m-%d").to_string();
+
+    let mut stmt = conn.prepare(
+        "SELECT wp.name, wp.id, pd.day_number, pd.title, pd.prompt, pd.id
+         FROM plan_days pd
+         INNER JOIN writing_plans wp ON wp.id = pd.plan_id
+         WHERE pd.scheduled_date = ?1 AND wp.status = 'active'
+         LIMIT 1"
+    )?;
+
+    let result = stmt.query_row(params![today], |row| {
+        let plan_day_id: i64 = row.get(5)?;
+        Ok((
+            row.get::<_, String>(0)?,
+            row.get::<_, i64>(1)?,
+            row.get::<_, i32>(2)?,
+            row.get::<_, String>(3)?,
+            row.get::<_, String>(4)?,
+            plan_day_id,
+        ))
+    });
+
+    match result {
+        Ok((plan_name, plan_id, day_number, title, prompt, plan_day_id)) => {
+            // 检查今天是否已写作
+            let is_completed: bool = conn.query_row(
+                "SELECT COUNT(*) FROM writings WHERE plan_day_id = ?1",
+                params![plan_day_id],
+                |row| row.get::<_, i32>(0),
+            )? > 0;
+
+            Ok(Some(TodayWritingTask {
+                plan_name,
+                plan_id,
+                day_number,
+                title,
+                prompt,
+                is_completed,
+            }))
+        }
+        Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+        Err(e) => Err(AppError::Database(e)),
+    }
+}
+
+/// 更新计划状态
+pub fn update_plan_status(conn: &Connection, plan_id: i64, status: PlanStatus) -> AppResult<()> {
+    let affected = conn.execute(
+        "UPDATE writing_plans SET status = ?1 WHERE id = ?2",
+        params![status.as_str(), plan_id],
+    )?;
+    if affected == 0 {
+        return Err(AppError::NotFound(format!("计划 ID {} 不存在", plan_id)));
+    }
+    Ok(())
+}
+
+/// 删除计划（级联删除每日条目）
+pub fn delete_plan(conn: &Connection, plan_id: i64) -> AppResult<()> {
+    let affected = conn.execute("DELETE FROM writing_plans WHERE id = ?1", params![plan_id])?;
+    if affected == 0 {
+        return Err(AppError::NotFound(format!("计划 ID {} 不存在", plan_id)));
+    }
+    Ok(())
+}

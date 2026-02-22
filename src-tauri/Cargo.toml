@@ -1,0 +1,47 @@
+[package]
+name = "writedo"
+version = "0.1.0"
+description = "WriteDo - 码字待办：任务提醒 + 写作练习 macOS 桌面工具"
+authors = ["terrell"]
+edition = "2021"
+
+[lib]
+name = "writedo_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+# Tauri 核心
+tauri = { version = "2", features = ["tray-icon"] }
+tauri-plugin-opener = "2"
+tauri-plugin-notification = "2"
+tauri-plugin-sql = { version = "2", features = ["sqlite"] }
+tauri-plugin-fs = "2"
+tauri-plugin-dialog = "2"
+
+# 序列化
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# 数据库
+rusqlite = { version = "0.32", features = ["bundled"] }
+
+# 时间处理
+chrono = { version = "0.4", features = ["serde"] }
+
+# 异步
+tokio = { version = "1", features = ["full"] }
+
+# 错误处理
+thiserror = "2"
+
+# UUID 生成
+uuid = { version = "1", features = ["v4"] }
+
+# Markdown 解析（用于导入写作计划）
+pulldown-cmark = "0.12"
+
+# 系统目录
+dirs-next = "2.0"

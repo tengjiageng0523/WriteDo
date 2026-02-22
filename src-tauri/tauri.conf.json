@@ -1,0 +1,51 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "WriteDo",
+  "version": "0.1.0",
+  "identifier": "com.terrell.writedo",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "WriteDo - 码字待办",
+        "width": 1000,
+        "height": 700,
+        "minWidth": 800,
+        "minHeight": 600,
+        "center": true,
+        "decorations": true,
+        "transparent": false
+      }
+    ],
+    "security": {
+      "csp": null
+    },
+    "trayIcon": {
+      "iconPath": "icons/icon.png",
+      "iconAsTemplate": true,
+      "tooltip": "WriteDo - 码字待办"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "shortDescription": "任务提醒 + 写作练习工具",
+    "longDescription": "WriteDo 是一款 macOS 桌面端的任务提醒与写作练习工具，支持菜单栏待办、每日码字计划和沉浸式写作模式。",
+    "category": "Productivity",
+    "macOS": {
+      "minimumSystemVersion": "10.15"
+    }
+  }
+}
