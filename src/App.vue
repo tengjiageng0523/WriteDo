@@ -4,6 +4,7 @@ import WritingEditor from './components/editor/WritingEditor.vue';
 import RitualTransition from './components/editor/RitualTransition.vue';
 import TaskPanel from './components/tasks/TaskPanel.vue';
 import PlanPanel from './components/plans/PlanPanel.vue';
+import StatsPanel from './components/stats/StatsPanel.vue';
 import SettingsPanel from './components/SettingsPanel.vue';
 import type { CustomFont } from './components/SettingsPanel.vue';
 
@@ -314,12 +315,8 @@ onBeforeUnmount(() => {
       <!-- 写作计划面板 -->
       <PlanPanel v-else-if="activeTab === 'plans'" />
 
-      <!-- 数据统计占位 -->
-      <div class="content-wrapper" style="max-width:100%" v-else>
-        <div class="flex items-center justify-center" style="flex:1">
-          <p class="text-tertiary">数据统计 — 开发中...</p>
-        </div>
-      </div>
+      <!-- 数据统计面板 -->
+      <StatsPanel v-else-if="activeTab === 'stats'" />
     </main>
 
     <!-- 设置面板 -->
