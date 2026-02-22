@@ -154,6 +154,7 @@
 <script setup lang="ts">
 import { ref, computed, nextTick, onMounted } from 'vue'
 import type { Task, CreateTaskRequest, Priority } from '../../types'
+import { requestPermission, notifyTodayTasks, notifyTaskCompleted } from '../../utils/notify'
 
 // 由于开发阶段可能不在 Tauri 环境中运行，提供 mock fallback
 let api: any = null
@@ -230,6 +231,11 @@ const loadTasks = async () => {
       { id: 4, title: '修复编辑器呼吸灯', priority: 'high', due_date: null, completed: true, created_at: null, updated_at: null },
     ]
   }
+
+  // 请求通知权限并发送今日待办提醒
+  await requestPermission()
+  const todayCount = tasks.value.filter(t => !t.completed && t.due_date && t.due_date <= todayStr.value).length
+  if (todayCount > 0) notifyTodayTasks(todayCount)
 }
 
 const addTask = async () => {
@@ -269,11 +275,13 @@ const toggleComplete = async (task: Task) => {
       const updated = await api.toggleTask(task.id)
       const idx = tasks.value.findIndex(t => t.id === task.id)
       if (idx !== -1) tasks.value[idx] = updated
+      if (updated.completed) notifyTaskCompleted(updated.title)
     } catch (e) {
       console.error('切换状态失败', e)
     }
   } else {
     task.completed = !task.completed
+    if (task.completed) notifyTaskCompleted(task.title)
   }
 }
 
