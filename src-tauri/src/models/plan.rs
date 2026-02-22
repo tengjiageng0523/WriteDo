@@ -94,6 +94,9 @@ pub struct AddPlanDayRequest {
     pub day_number: i32,
     pub title: String,
     pub prompt: String,
+    /// 自定义日期（可选，不传则自动计算）
+    #[serde(default)]
+    pub scheduled_date: Option<String>,
 }
 
 /// 导入写作计划的请求（JSON 格式）

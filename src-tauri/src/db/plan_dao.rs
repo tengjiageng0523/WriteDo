@@ -298,11 +298,13 @@ pub fn add_plan_day(conn: &Connection, req: &AddPlanDayRequest) -> AppResult<()>
         params![plan_id, insert_at],
     )?;
 
-    // 计算 scheduled_date
-    let scheduled = NaiveDate::parse_from_str(&start_date, "%Y-%m-%d")
-        .map(|d| d + chrono::Duration::days((insert_at - 1) as i64))
-        .map(|d| d.to_string())
-        .unwrap_or_default();
+    // 使用自定义日期或自动计算
+    let scheduled = req.scheduled_date.clone().unwrap_or_else(|| {
+        NaiveDate::parse_from_str(&start_date, "%Y-%m-%d")
+            .map(|d| d + chrono::Duration::days((insert_at - 1) as i64))
+            .map(|d| d.to_string())
+            .unwrap_or_default()
+    });
 
     // 插入新条目
     conn.execute(

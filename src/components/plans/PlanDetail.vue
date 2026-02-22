@@ -132,6 +132,10 @@
             <label>写作提示</label>
             <textarea v-model="addDayForm.prompt" class="form-textarea" rows="4" placeholder="写一篇关于..."></textarea>
           </div>
+          <div class="form-group">
+            <label>日期</label>
+            <input v-model="addDayForm.scheduled_date" type="date" class="form-input" />
+          </div>
         </div>
         <div class="dialog-actions">
           <button class="btn-ghost btn-sm" @click="showAddDay = false">取消</button>
@@ -196,7 +200,7 @@ const deletingDay = ref<PlanDayDetail | null>(null)
 
 // 添加
 const showAddDay = ref(false)
-const addDayForm = ref({ day_number: 1, title: '', prompt: '' })
+const addDayForm = ref({ day_number: 1, title: '', prompt: '', scheduled_date: '' })
 
 const completedDays = computed(() => days.value.filter(d => d.is_completed).length)
 const progressPercent = computed(() => {
@@ -284,7 +288,9 @@ const formatDate = (d: string) => {
 
 // 添加条目
 const openAddDay = (dayNumber: number) => {
-  addDayForm.value = { day_number: dayNumber, title: '', prompt: '' }
+  const d = new Date()
+  const defaultDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  addDayForm.value = { day_number: dayNumber, title: '', prompt: '', scheduled_date: defaultDate }
   showAddDay.value = true
 }
 
@@ -297,6 +303,7 @@ const doAddDay = async () => {
         day_number: addDayForm.value.day_number,
         title: addDayForm.value.title,
         prompt: addDayForm.value.prompt,
+        scheduled_date: addDayForm.value.scheduled_date || undefined,
       })
       showToast('条目已添加')
       await loadDetail()

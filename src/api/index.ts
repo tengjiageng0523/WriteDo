@@ -107,7 +107,7 @@ export async function deletePlanDay(dayId: number): Promise<void> {
 }
 
 /** 添加每日条目 */
-export async function addPlanDay(request: { plan_id: number; day_number: number; title: string; prompt: string }): Promise<void> {
+export async function addPlanDay(request: { plan_id: number; day_number: number; title: string; prompt: string; scheduled_date?: string }): Promise<void> {
     return invoke('add_plan_day', { request });
 }
 
