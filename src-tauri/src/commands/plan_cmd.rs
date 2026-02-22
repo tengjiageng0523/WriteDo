@@ -81,3 +81,10 @@ pub fn delete_plan_day(db: State<'_, DbState>, day_id: i64) -> AppResult<()> {
     let conn = db.lock().map_err(|e| crate::errors::AppError::Business(e.to_string()))?;
     plan_dao::delete_plan_day(&conn, day_id)
 }
+
+/// 添加每日条目
+#[tauri::command]
+pub fn add_plan_day(db: State<'_, DbState>, request: AddPlanDayRequest) -> AppResult<()> {
+    let conn = db.lock().map_err(|e| crate::errors::AppError::Business(e.to_string()))?;
+    plan_dao::add_plan_day(&conn, &request)
+}

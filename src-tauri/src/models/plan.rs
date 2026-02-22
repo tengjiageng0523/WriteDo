@@ -86,6 +86,16 @@ pub struct UpdatePlanDayRequest {
     pub prompt: Option<String>,
 }
 
+/// 添加每日条目请求
+#[derive(Debug, Deserialize)]
+pub struct AddPlanDayRequest {
+    pub plan_id: i64,
+    /// 插入位置（第几天）
+    pub day_number: i32,
+    pub title: String,
+    pub prompt: String,
+}
+
 /// 导入写作计划的请求（JSON 格式）
 #[derive(Debug, Deserialize)]
 pub struct ImportPlanRequest {

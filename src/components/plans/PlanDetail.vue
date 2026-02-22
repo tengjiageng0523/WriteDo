@@ -25,47 +25,63 @@
 
     <!-- 每日条目列表 -->
     <div class="day-list">
-      <div
-        class="day-card"
-        v-for="day in days"
-        :key="day.id"
-        :class="{ completed: day.is_completed, today: isToday(day.scheduled_date) }"
-      >
-        <div class="day-left">
-          <div class="day-number" :class="{ done: day.is_completed }">
-            <svg v-if="day.is_completed" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-            <span v-else>{{ day.day_number }}</span>
-          </div>
-        </div>
+      <template v-for="(day, idx) in days" :key="day.id">
+        <!-- 插入按钮（在每条前面） -->
+        <button class="insert-btn" @click="openAddDay(idx + 1)" title="在此处插入新条目">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        </button>
 
-        <div class="day-content">
-          <div class="day-top-row">
-            <h4 class="day-title">{{ day.title }}</h4>
-            <div class="day-actions">
-              <button class="day-action-btn" @click="openEditDay(day)" title="编辑">
-                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-              </button>
-              <button class="day-action-btn danger" @click="confirmDeleteDay(day)" title="删除">
-                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-              </button>
+        <!-- 条目卡片 -->
+        <div
+          class="day-card"
+          :class="{ completed: day.is_completed, today: isToday(day.scheduled_date) }"
+        >
+          <div class="day-left">
+            <div class="day-number" :class="{ done: day.is_completed }">
+              <svg v-if="day.is_completed" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              <span v-else>{{ idx + 1 }}</span>
             </div>
           </div>
-          <p class="day-prompt text-tertiary">{{ day.prompt }}</p>
-          <div class="day-meta">
-            <span class="day-date" v-if="day.scheduled_date">{{ formatDate(day.scheduled_date) }}</span>
-            <span class="day-writing-info" v-if="day.is_completed">
-              <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"></path><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path></svg>
-              {{ day.writing_title || '已完成写作' }} · {{ day.word_count }} 字
-            </span>
-            <span class="day-status-pending" v-else-if="isToday(day.scheduled_date)">今日待完成</span>
+
+          <div class="day-content">
+            <div class="day-top-row">
+              <h4 class="day-title">{{ day.title }}</h4>
+              <div class="day-actions">
+                <button class="day-action-btn" @click="openEditDay(day)" title="编辑">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                </button>
+                <button class="day-action-btn danger" @click="confirmDeleteDay(day)" title="删除">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                </button>
+              </div>
+            </div>
+            <p class="day-prompt text-tertiary">{{ day.prompt }}</p>
+            <div class="day-meta">
+              <span class="day-date" v-if="day.scheduled_date">{{ formatDate(day.scheduled_date) }}</span>
+              <span class="day-writing-info" v-if="day.is_completed">
+                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"></path><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path></svg>
+                {{ day.writing_title || '已完成写作' }} · {{ day.word_count }} 字
+              </span>
+              <span class="day-status-pending" v-else-if="isToday(day.scheduled_date)">今日待完成</span>
+            </div>
           </div>
         </div>
-      </div>
+      </template>
+
+      <!-- 底部添加按钮 -->
+      <button class="add-day-btn" @click="openAddDay(days.length + 1)">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        添加新条目
+      </button>
     </div>
 
     <!-- 空状态 -->
     <div class="empty-days" v-if="!days.length && !loading">
       <p class="text-tertiary">暂无每日条目</p>
+      <button class="add-day-btn" @click="openAddDay(1)" style="margin-top:12px">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        添加第一个条目
+      </button>
     </div>
 
     <!-- 编辑条目对话框 -->
@@ -99,6 +115,27 @@
         <div class="dialog-actions">
           <button class="btn-ghost btn-sm" @click="showDeleteDay = false">取消</button>
           <button class="btn-danger btn-sm" @click="doDeleteDay">删除</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 添加条目对话框 -->
+    <div class="overlay" v-if="showAddDay" @click.self="showAddDay = false">
+      <div class="edit-dialog">
+        <h3 class="dialog-title">添加新条目（第 {{ addDayForm.day_number }} 天）</h3>
+        <div class="edit-form">
+          <div class="form-group">
+            <label>标题</label>
+            <input v-model="addDayForm.title" class="form-input" placeholder="例如：童年记忆" />
+          </div>
+          <div class="form-group">
+            <label>写作提示</label>
+            <textarea v-model="addDayForm.prompt" class="form-textarea" rows="4" placeholder="写一篇关于..."></textarea>
+          </div>
+        </div>
+        <div class="dialog-actions">
+          <button class="btn-ghost btn-sm" @click="showAddDay = false">取消</button>
+          <button class="btn-primary btn-sm" @click="doAddDay" :disabled="!addDayForm.title.trim()">添加</button>
         </div>
       </div>
     </div>
@@ -156,6 +193,10 @@ const editDayForm = ref({ id: 0, day_number: 0, title: '', prompt: '' })
 // 删除
 const showDeleteDay = ref(false)
 const deletingDay = ref<PlanDayDetail | null>(null)
+
+// 添加
+const showAddDay = ref(false)
+const addDayForm = ref({ day_number: 1, title: '', prompt: '' })
 
 const completedDays = computed(() => days.value.filter(d => d.is_completed).length)
 const progressPercent = computed(() => {
@@ -239,6 +280,31 @@ const statusLabel = (s: string) => ({ active: '进行中', paused: '已暂停', 
 const formatDate = (d: string) => {
   const p = d.split('-')
   return `${p[1]}/${p[2]}`
+}
+
+// 添加条目
+const openAddDay = (dayNumber: number) => {
+  addDayForm.value = { day_number: dayNumber, title: '', prompt: '' }
+  showAddDay.value = true
+}
+
+const doAddDay = async () => {
+  try {
+    if (isTauri) {
+      if (!api) api = await import('../../api')
+      await api.addPlanDay({
+        plan_id: props.planId,
+        day_number: addDayForm.value.day_number,
+        title: addDayForm.value.title,
+        prompt: addDayForm.value.prompt,
+      })
+      showToast('条目已添加')
+      await loadDetail()
+    }
+    showAddDay.value = false
+  } catch (e: any) {
+    showToast('添加失败：' + (e.message || e))
+  }
 }
 
 onMounted(loadDetail)
@@ -335,6 +401,38 @@ onMounted(loadDetail)
 
 /* 空状态 */
 .empty-days { text-align: center; padding: 40px; }
+
+/* 插入按钮 */
+.insert-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 100%; height: 0; padding: 0; border: none;
+  background: transparent; cursor: pointer; position: relative;
+  margin: -2px 0; z-index: 1; opacity: 0; transition: all 0.2s;
+}
+.insert-btn:hover {
+  height: 28px; opacity: 1; margin: 2px 0;
+}
+.insert-btn:hover svg {
+  background: var(--accent-primary); color: white;
+  border-radius: 50%; padding: 3px; width: 18px; height: 18px;
+}
+.insert-btn::before {
+  content: ''; position: absolute; left: 0; right: 0; top: 50%;
+  height: 1px; background: var(--accent-primary); opacity: 0.3;
+}
+
+/* 底部添加按钮 */
+.add-day-btn {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  width: 100%; padding: 12px; margin-top: 4px;
+  border: 1px dashed var(--border-subtle); border-radius: var(--radius-md);
+  background: transparent; color: var(--text-tertiary);
+  font-size: 0.85rem; cursor: pointer; transition: all 0.2s;
+}
+.add-day-btn:hover {
+  border-color: var(--accent-primary); color: var(--accent-primary);
+  background: rgba(59, 130, 246, 0.04);
+}
 
 /* 对话框 */
 .overlay {

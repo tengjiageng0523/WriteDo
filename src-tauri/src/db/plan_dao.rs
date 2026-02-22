@@ -245,11 +245,82 @@ pub fn update_plan_day(conn: &Connection, req: &UpdatePlanDayRequest) -> AppResu
     Ok(())
 }
 
-/// 删除每日条目
+/// 删除每日条目（删除后自动重排序号 + 更新 total_days）
 pub fn delete_plan_day(conn: &Connection, day_id: i64) -> AppResult<()> {
-    let affected = conn.execute("DELETE FROM plan_days WHERE id = ?1", params![day_id])?;
-    if affected == 0 {
-        return Err(AppError::NotFound(format!("条目 ID {} 不存在", day_id)));
+    // 先获取 plan_id
+    let plan_id: i64 = conn.query_row(
+        "SELECT plan_id FROM plan_days WHERE id = ?1",
+        params![day_id],
+        |row| row.get(0),
+    ).map_err(|_| AppError::NotFound(format!("条目 ID {} 不存在", day_id)))?;
+
+    // 删除条目
+    conn.execute("DELETE FROM plan_days WHERE id = ?1", params![day_id])?;
+
+    // 按原有顺序重新编号
+    let mut stmt = conn.prepare(
+        "SELECT id FROM plan_days WHERE plan_id = ?1 ORDER BY day_number ASC"
+    )?;
+    let ids: Vec<i64> = stmt.query_map(params![plan_id], |row| row.get(0))?
+        .filter_map(|r| r.ok()).collect();
+
+    for (i, id) in ids.iter().enumerate() {
+        conn.execute(
+            "UPDATE plan_days SET day_number = ?1 WHERE id = ?2",
+            params![(i + 1) as i32, id],
+        )?;
     }
+
+    // 更新 total_days
+    conn.execute(
+        "UPDATE writing_plans SET total_days = ?1 WHERE id = ?2",
+        params![ids.len() as i32, plan_id],
+    )?;
+
     Ok(())
 }
+
+/// 在指定位置插入新条目（后续条目自动后移）
+pub fn add_plan_day(conn: &Connection, req: &AddPlanDayRequest) -> AppResult<()> {
+    let plan_id = req.plan_id;
+    let insert_at = req.day_number; // 要插入的位置
+
+    // 获取计划的 start_date 来计算 scheduled_date
+    let start_date: String = conn.query_row(
+        "SELECT start_date FROM writing_plans WHERE id = ?1",
+        params![plan_id],
+        |row| row.get(0),
+    ).map_err(|_| AppError::NotFound(format!("计划 ID {} 不存在", plan_id)))?;
+
+    // 把 >= insert_at 的条目 day_number 全部 +1
+    conn.execute(
+        "UPDATE plan_days SET day_number = day_number + 1 WHERE plan_id = ?1 AND day_number >= ?2",
+        params![plan_id, insert_at],
+    )?;
+
+    // 计算 scheduled_date
+    let scheduled = NaiveDate::parse_from_str(&start_date, "%Y-%m-%d")
+        .map(|d| d + chrono::Duration::days((insert_at - 1) as i64))
+        .map(|d| d.to_string())
+        .unwrap_or_default();
+
+    // 插入新条目
+    conn.execute(
+        "INSERT INTO plan_days (plan_id, day_number, title, prompt, scheduled_date) VALUES (?1, ?2, ?3, ?4, ?5)",
+        params![plan_id, insert_at, req.title, req.prompt, scheduled],
+    )?;
+
+    // 更新 total_days
+    let count: i32 = conn.query_row(
+        "SELECT COUNT(*) FROM plan_days WHERE plan_id = ?1",
+        params![plan_id],
+        |row| row.get(0),
+    )?;
+    conn.execute(
+        "UPDATE writing_plans SET total_days = ?1 WHERE id = ?2",
+        params![count, plan_id],
+    )?;
+
+    Ok(())
+}
+
