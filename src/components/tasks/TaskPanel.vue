@@ -6,10 +6,16 @@
         <h1 class="panel-title">待办任务</h1>
         <p class="panel-subtitle text-tertiary">{{ unfinishedCount }} 项未完成</p>
       </div>
-      <button class="btn-primary btn-sm" @click="showAddForm = true" v-if="!showAddForm">
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-        新建任务
-      </button>
+      <div class="header-actions">
+        <button class="btn-ghost btn-sm" @click="showImportDialog = true" title="导入任务">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          导入
+        </button>
+        <button class="btn-primary btn-sm" @click="showAddForm = true" v-if="!showAddForm">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          新建任务
+        </button>
+      </div>
     </header>
 
     <!-- 新建任务表单 -->
@@ -119,6 +125,29 @@
       <p class="empty-text">{{ activeFilter === 'completed' ? '还没有已完成的任务' : '没有待办任务，享受清闲吧！' }}</p>
       <button class="btn-primary btn-sm" @click="showAddForm = true" v-if="activeFilter !== 'completed'">添加第一个任务</button>
     </div>
+
+    <!-- 导入对话框 -->
+    <div class="import-overlay" v-if="showImportDialog" @click.self="showImportDialog = false">
+      <div class="import-dialog">
+        <h3 class="import-title">批量导入任务</h3>
+        <p class="import-desc">粘贴 JSON 格式的任务列表，每个任务包含 title（必填）、priority、due_date</p>
+        <textarea v-model="importJson" class="import-textarea" placeholder='[
+  { "title": "完成报告", "priority": "high", "due_date": "2026-02-25" },
+  { "title": "读书笔记", "priority": "medium" }
+]'></textarea>
+        <div class="import-actions">
+          <span class="import-hint" v-if="importError">{{ importError }}</span>
+          <span class="import-hint import-success" v-if="importSuccess">{{ importSuccess }}</span>
+          <button class="btn-ghost btn-sm" @click="showImportDialog = false; importJson = ''; importError = ''; importSuccess = ''">取消</button>
+          <button class="btn-primary btn-sm" @click="importTasks" :disabled="!importJson.trim()">导入</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast 提示 -->
+    <transition name="toast">
+      <div class="toast" v-if="toastMsg">{{ toastMsg }}</div>
+    </transition>
   </div>
 </template>
 
@@ -132,6 +161,11 @@ const isTauri = typeof window !== 'undefined' && '__TAURI__' in window
 
 const tasks = ref<Task[]>([])
 const showAddForm = ref(false)
+const showImportDialog = ref(false)
+const importJson = ref('')
+const importError = ref('')
+const importSuccess = ref('')
+const toastMsg = ref('')
 const activeFilter = ref<'all' | 'today' | 'completed'>('all')
 const editingId = ref<number | null>(null)
 const newTaskInput = ref<HTMLInputElement>()
@@ -307,6 +341,45 @@ const formatDate = (dateStr: string) => {
 }
 
 const isOverdue = (dateStr: string) => dateStr < todayStr.value
+
+// === 导入任务 ===
+const importTasks = async () => {
+  importError.value = ''
+  importSuccess.value = ''
+  try {
+    const parsed = JSON.parse(importJson.value)
+    if (!Array.isArray(parsed)) { importError.value = '格式错误：需要一个 JSON 数组'; return }
+
+    if (isTauri && api) {
+      const imported = await api.importTasksJson(importJson.value)
+      tasks.value.unshift(...imported)
+      showToast(`成功导入 ${imported.length} 个任务`)
+    } else {
+      // mock 模式
+      const mockTasks = parsed.map((item: any, i: number) => ({
+        id: Date.now() + i,
+        title: item.title || '未命名任务',
+        priority: item.priority || 'medium',
+        due_date: item.due_date || null,
+        completed: false,
+        created_at: null,
+        updated_at: null,
+      }))
+      tasks.value.unshift(...mockTasks)
+      showToast(`成功导入 ${mockTasks.length} 个任务`)
+    }
+    importJson.value = ''
+    showImportDialog.value = false
+  } catch (e: any) {
+    importError.value = 'JSON 解析失败：' + (e.message || '格式不正确')
+  }
+}
+
+// === Toast ===
+const showToast = (msg: string) => {
+  toastMsg.value = msg
+  setTimeout(() => { toastMsg.value = '' }, 2500)
+}
 
 onMounted(loadTasks)
 </script>
@@ -543,4 +616,47 @@ onMounted(loadTasks)
   font-size: 0.95rem;
   color: var(--text-tertiary);
 }
+
+.header-actions { display: flex; gap: 8px; align-items: center; }
+
+/* 导入对话框 */
+.import-overlay {
+  position: fixed; inset: 0; z-index: 50;
+  background: rgba(0,0,0,0.25); display: flex;
+  align-items: center; justify-content: center;
+}
+.import-dialog {
+  background: var(--bg-base); border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg); padding: 24px;
+  width: 480px; max-width: 90vw; box-shadow: var(--shadow-lg);
+}
+.import-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 8px; }
+.import-desc { font-size: 0.85rem; color: var(--text-tertiary); margin-bottom: 12px; }
+.import-textarea {
+  width: 100%; height: 160px; background: var(--bg-surface);
+  border: 1px solid var(--border-subtle); border-radius: var(--radius-md);
+  color: var(--text-primary); padding: 12px; font-size: 0.85rem;
+  font-family: 'Menlo', monospace; resize: vertical;
+}
+.import-textarea:focus { outline: none; border-color: var(--accent-primary); }
+.import-actions {
+  display: flex; justify-content: flex-end; align-items: center;
+  gap: 8px; margin-top: 12px;
+}
+.import-hint { font-size: 0.8rem; color: #ef4444; margin-right: auto; }
+.import-success { color: #10b981; }
+
+/* Toast */
+.toast {
+  position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%);
+  background: var(--text-primary); color: var(--bg-base);
+  padding: 10px 24px; border-radius: 20px;
+  font-size: 0.9rem; font-weight: 500;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  z-index: 200;
+}
+.toast-enter-active { transition: all 0.3s ease; }
+.toast-leave-active { transition: all 0.3s ease; }
+.toast-enter-from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+.toast-leave-to { opacity: 0; transform: translateX(-50%) translateY(20px); }
 </style>
