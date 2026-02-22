@@ -16,7 +16,7 @@
 
     <!-- 计划列表 -->
     <div class="plan-list" v-if="plans.length">
-      <div class="plan-card" v-for="plan in plans" :key="plan.id" :class="'status-' + plan.status">
+      <div class="plan-card" v-for="plan in plans" :key="plan.id ?? 0" :class="'status-' + plan.status">
         <div class="plan-card-header">
           <h3 class="plan-name">{{ plan.name }}</h3>
           <span class="plan-status-badge" :class="plan.status">{{ statusLabel(plan.status) }}</span>

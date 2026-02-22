@@ -54,14 +54,14 @@ const saveWriting = async () => {
         word_count: charCount,
         duration_seconds: duration,
       });
-      showSaveToast(`✅ 已保存 (${charCount} 字)`);
+      showSaveToast(`已保存 (${charCount} 字)`);
     } catch (e) {
       console.error('保存失败', e);
-      showSaveToast('❌ 保存失败');
+      showSaveToast('保存失败');
     }
   } else {
     // mock 模式
-    showSaveToast(`✅ 已保存 (${charCount} 字·${Math.floor(duration / 60)}分钟)`);
+    showSaveToast(`已保存 (${charCount} 字·${Math.floor(duration / 60)}分钟)`);
   }
 };
 
@@ -284,7 +284,7 @@ onBeforeUnmount(() => {
         </header>
 
         <section class="prompt-card">
-          <h2 class="prompt-title">📝 一场雨中的故事</h2>
+          <h2 class="prompt-title">一场雨中的故事</h2>
           <p class="prompt-desc text-secondary mt-2">
             以下雨天为背景，写一个发生在你身上的真实故事。注意环境描写与情感表达的融合。试着还原雨滴的声音、空气的味道以及当时的内心波动。
           </p>

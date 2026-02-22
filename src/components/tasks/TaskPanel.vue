@@ -66,7 +66,7 @@
       <div 
         class="task-item" 
         v-for="task in filteredTasks" 
-        :key="task.id"
+        :key="task.id ?? 0"
         :class="{ 
           'is-completed': task.completed, 
           'is-editing': editingId === task.id,

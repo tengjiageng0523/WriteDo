@@ -56,7 +56,7 @@ export async function notifyTodayTasks(count: number): Promise<void> {
     if (count > 0) {
         await sendNotification(
             'WriteDo - 今日待办',
-            `你有 ${count} 个待办任务需要完成 📝`
+            `你有 ${count} 个待办任务需要完成`
         )
     }
 }
@@ -66,7 +66,7 @@ export async function notifyTodayTasks(count: number): Promise<void> {
  */
 export async function notifyTaskCompleted(taskTitle: string): Promise<void> {
     await sendNotification(
-        '任务已完成 ✅',
+        '任务已完成',
         taskTitle
     )
 }

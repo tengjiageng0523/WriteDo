@@ -168,7 +168,7 @@ const checkMilestone = (count: number) => {
   for (const m of milestones) {
     if (count >= m && lastMilestone.value < m) {
       lastMilestone.value = m
-      milestoneMsg.value = m >= 1000 ? `🎉 ${m / 1000}k 字！太棒了！` : `✨ ${m} 字！继续加油！`
+      milestoneMsg.value = m >= 1000 ? `★ ${m / 1000}k 字！太棒了！` : `● ${m} 字！继续加油！`
       setTimeout(() => { milestoneMsg.value = '' }, 2500)
       break
     }
@@ -246,7 +246,7 @@ const formatDuration = (seconds: number) => {
 
 watch(() => props.modelValue, (newVal) => {
   if (editor.value && newVal && editor.value.getHTML() !== newVal) {
-    editor.value.commands.setContent(newVal, false)
+    editor.value.commands.setContent(newVal, false as any)
   }
 })
 </script>

@@ -14,23 +14,23 @@
     <!-- 核心指标卡片 -->
     <div class="stats-cards">
       <div class="stat-card accent">
-        <div class="stat-icon">🔥</div>
+        <div class="stat-icon"><AppIcon name="flame" :size="24" color="#fff" /></div>
         <div class="stat-value">{{ stats.current_streak }}</div>
         <div class="stat-label">连续打卡</div>
         <div class="stat-unit">天</div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon">📝</div>
+        <div class="stat-icon"><AppIcon name="pen" :size="24" /></div>
         <div class="stat-value">{{ stats.total_words.toLocaleString() }}</div>
         <div class="stat-label">总字数</div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon">📅</div>
+        <div class="stat-icon"><AppIcon name="calendar" :size="24" /></div>
         <div class="stat-value">{{ stats.total_days }}</div>
         <div class="stat-label">写作天数</div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon">⏱</div>
+        <div class="stat-icon"><AppIcon name="clock" :size="24" /></div>
         <div class="stat-value">{{ formatHours(stats.total_duration) }}</div>
         <div class="stat-label">总时长</div>
       </div>
@@ -122,6 +122,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import type { WritingStats, HeatmapEntry } from '../../types'
+import AppIcon from '../icons/AppIcon.vue'
 
 const isTauri = typeof window !== 'undefined' && '__TAURI__' in window
 let api: any = null
