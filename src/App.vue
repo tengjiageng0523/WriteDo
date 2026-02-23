@@ -50,6 +50,16 @@ const loadTodayWriting = async () => {
   }
 };
 
+// 下拉选择器变化
+const onPlanSelectChange = (val: string) => {
+  const id = +val;
+  if (id === 0) {
+    todayWriting.value = null; // 自由写作
+  } else {
+    onSelectPlan(id);
+  }
+};
+
 // 选择计划后加载最近一天的任务
 const onSelectPlan = async (planId: number) => {
   if (!isTauri || !apiModule) return;
@@ -368,8 +378,9 @@ onBeforeUnmount(() => {
               <p class="page-subtitle text-secondary" v-if="todayWriting">
                 {{ todayWriting.plan_name }} · 第 {{ todayWriting.day_number }} 天
               </p>
-              <select class="plan-select" @change="onSelectPlan(+($event.target as HTMLSelectElement).value)" :value="todayWriting?.plan_id || ''">
-                <option value="" disabled>选择写作计划</option>
+              <p class="page-subtitle text-secondary" v-else>自由写作</p>
+              <select class="plan-select" @change="onPlanSelectChange(($event.target as HTMLSelectElement).value)" :value="todayWriting?.plan_id || '0'">
+                <option value="0">✨ 自由写作</option>
                 <option v-for="p in allPlans" :key="p.id" :value="p.id">{{ p.name }}</option>
               </select>
             </div>
