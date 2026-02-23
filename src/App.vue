@@ -31,17 +31,65 @@ const saveToast = ref('');
 const showRitual = ref(false);
 
 // 今日写作任务
-const todayWriting = ref<{ plan_name: string; plan_id: number; day_number: number; title: string; prompt: string; is_completed: boolean } | null>(null);
+const todayWriting = ref<{ plan_name: string; plan_id: number; day_number: number; title: string; prompt: string; is_completed: boolean; day_id?: number } | null>(null);
+
+// 计划列表（供选择器用）
+const allPlans = ref<{ id: number; name: string; status: string }[]>([]);
 
 const loadTodayWriting = async () => {
   if (isTauri) {
     try {
       if (!apiModule) apiModule = await import('./api');
       todayWriting.value = await apiModule.getTodayWriting();
+      // 同时加载计划列表
+      const plans = await apiModule.getPlans();
+      allPlans.value = plans.filter((p: any) => p.status === 'active').map((p: any) => ({ id: p.id, name: p.name, status: p.status }));
     } catch (e) {
       console.warn('加载今日写作失败', e);
     }
   }
+};
+
+// 选择计划后加载最近一天的任务
+const onSelectPlan = async (planId: number) => {
+  if (!isTauri || !apiModule) return;
+  try {
+    const detail = await apiModule.getPlanDetail(planId);
+    if (!detail || !detail.days.length) return;
+    const today = new Date().toISOString().split('T')[0];
+    // 找最近未完成的任务（按日期升序，找 >= 今天的第一个未完成的）
+    const upcoming = detail.days
+      .filter((d: any) => !d.is_completed && d.scheduled_date >= today)
+      .sort((a: any, b: any) => a.day_number - b.day_number);
+    const task = upcoming[0] || detail.days.find((d: any) => !d.is_completed) || detail.days[0];
+    if (task) {
+      todayWriting.value = {
+        plan_name: detail.name,
+        plan_id: planId,
+        day_number: task.day_number,
+        title: task.title,
+        prompt: task.prompt,
+        is_completed: task.is_completed || false,
+        day_id: task.id,
+      };
+    }
+  } catch (e) {
+    console.warn('加载计划任务失败', e);
+  }
+};
+
+// 从计划详情页跳转写作
+const onStartWriting = (task: any) => {
+  todayWriting.value = {
+    plan_name: task.plan_name,
+    plan_id: task.plan_id,
+    day_number: task.day_number,
+    title: task.title,
+    prompt: task.prompt,
+    is_completed: false,
+    day_id: task.day_id,
+  };
+  activeTab.value = 'writing';
 };
 
 import { isTauri } from './utils/env';
@@ -316,9 +364,15 @@ onBeforeUnmount(() => {
         
         <header class="content-header">
           <div>
-            <p class="page-subtitle text-secondary" v-if="todayWriting">
-              {{ todayWriting.plan_name }} · 第 {{ todayWriting.day_number }} 天
-            </p>
+            <div class="plan-selector-row" v-if="allPlans.length">
+              <p class="page-subtitle text-secondary" v-if="todayWriting">
+                {{ todayWriting.plan_name }} · 第 {{ todayWriting.day_number }} 天
+              </p>
+              <select class="plan-select" @change="onSelectPlan(+($event.target as HTMLSelectElement).value)" :value="todayWriting?.plan_id || ''">
+                <option value="" disabled>选择写作计划</option>
+                <option v-for="p in allPlans" :key="p.id" :value="p.id">{{ p.name }}</option>
+              </select>
+            </div>
             <h1 class="page-title">今日写作</h1>
           </div>
           <button class="btn-primary flex items-center gap-2" @click="toggleImmersiveMode">
@@ -366,7 +420,7 @@ onBeforeUnmount(() => {
       <TaskPanel v-else-if="activeTab === 'tasks'" />
 
       <!-- 写作计划面板 -->
-      <PlanPanel v-else-if="activeTab === 'plans'" />
+      <PlanPanel v-else-if="activeTab === 'plans'" @startWriting="onStartWriting" />
 
       <!-- 数据统计面板 -->
       <StatsPanel v-else-if="activeTab === 'stats'" />
@@ -453,6 +507,17 @@ onBeforeUnmount(() => {
 }
 .page-title { font-size: 1.6rem; font-weight: 600; letter-spacing: -0.02em; }
 .page-subtitle { font-size: 0.8rem; letter-spacing: 0.05em; margin-bottom: 4px; }
+.plan-selector-row {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 4px;
+}
+.plan-select {
+  font-size: 0.75rem; padding: 2px 8px; border-radius: 6px;
+  border: 1px solid var(--border-subtle); background: var(--bg-surface);
+  color: var(--text-secondary); cursor: pointer; outline: none;
+  transition: border-color 0.2s;
+}
+.plan-select:hover { border-color: var(--accent-primary); }
+.plan-select:focus { border-color: var(--accent-primary); box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15); }
 
 .prompt-card {
   padding-left: 16px; margin-bottom: 28px;

@@ -42,6 +42,9 @@ pub struct WritingPlan {
     #[serde(default = "default_status")]
     pub status: PlanStatus,
     pub created_at: Option<String>,
+    /// 已完成天数（关联 writings 表计算）
+    #[serde(default)]
+    pub completed_days: i32,
 }
 
 fn default_status() -> PlanStatus {

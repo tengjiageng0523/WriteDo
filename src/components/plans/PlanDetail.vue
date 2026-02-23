@@ -63,6 +63,10 @@
                 {{ day.writing_title || '已完成写作' }} · {{ day.word_count }} 字
               </span>
               <span class="day-status-pending" v-else-if="isToday(day.scheduled_date)">今日待完成</span>
+              <button v-if="isToday(day.scheduled_date) && !day.is_completed" class="start-writing-btn" @click="$emit('startWriting', { plan_name: plan?.name, plan_id: props.planId, day_number: day.day_number, title: day.title, prompt: day.prompt, day_id: day.id })">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+                开始写作
+              </button>
             </div>
           </div>
         </div>
@@ -180,7 +184,7 @@ interface PlanInfo {
 }
 
 const props = defineProps<{ planId: number }>()
-defineEmits(['back'])
+defineEmits(['back', 'startWriting'])
 
 let api: any = null
 import { isTauri } from '../../utils/env'
@@ -394,6 +398,16 @@ onMounted(loadDetail)
   font-size: 0.72rem; padding: 1px 8px; border-radius: 8px;
   background: rgba(59, 130, 246, 0.1); color: #3b82f6;
 }
+
+/* 开始写作按钮 */
+.start-writing-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 10px; border-radius: 8px; border: none;
+  background: var(--accent-primary); color: white;
+  font-size: 0.72rem; font-weight: 500; cursor: pointer;
+  transition: all 0.2s;
+}
+.start-writing-btn:hover { opacity: 0.85; transform: scale(1.02); }
 
 /* 操作按钮 */
 .day-actions { display: flex; gap: 4px; opacity: 0; transition: opacity 0.2s; }

@@ -30,8 +30,11 @@ pub fn create_plan(conn: &Connection, plan: &ImportPlanRequest) -> AppResult<i64
 /// 获取所有写作计划（不含每日条目详情）
 pub fn get_all_plans(conn: &Connection) -> AppResult<Vec<WritingPlan>> {
     let mut stmt = conn.prepare(
-        "SELECT id, name, theme, start_date, total_days, status, created_at
-         FROM writing_plans ORDER BY created_at DESC"
+        "SELECT wp.id, wp.name, wp.theme, wp.start_date, wp.total_days, wp.status, wp.created_at,
+                (SELECT COUNT(DISTINCT pd.id) FROM plan_days pd
+                 INNER JOIN writings w ON w.plan_day_id = pd.id
+                 WHERE pd.plan_id = wp.id) as completed_days
+         FROM writing_plans wp ORDER BY wp.created_at DESC"
     )?;
 
     let plans = stmt.query_map([], |row| {
@@ -43,6 +46,7 @@ pub fn get_all_plans(conn: &Connection) -> AppResult<Vec<WritingPlan>> {
             total_days: row.get(4)?,
             status: PlanStatus::from_str(&row.get::<_, String>(5)?),
             created_at: row.get(6)?,
+            completed_days: row.get(7)?,
         })
     })?.collect::<Result<Vec<_>, _>>()?;
 
@@ -92,8 +96,11 @@ pub fn get_plan_with_days(conn: &Connection, plan_id: i64) -> AppResult<PlanWith
 /// 根据 ID 获取计划
 fn get_plan_by_id(conn: &Connection, id: i64) -> AppResult<WritingPlan> {
     let mut stmt = conn.prepare(
-        "SELECT id, name, theme, start_date, total_days, status, created_at
-         FROM writing_plans WHERE id = ?1"
+        "SELECT wp.id, wp.name, wp.theme, wp.start_date, wp.total_days, wp.status, wp.created_at,
+                (SELECT COUNT(DISTINCT pd.id) FROM plan_days pd
+                 INNER JOIN writings w ON w.plan_day_id = pd.id
+                 WHERE pd.plan_id = wp.id) as completed_days
+         FROM writing_plans wp WHERE wp.id = ?1"
     )?;
 
     stmt.query_row(params![id], |row| {
@@ -105,6 +112,7 @@ fn get_plan_by_id(conn: &Connection, id: i64) -> AppResult<WritingPlan> {
             total_days: row.get(4)?,
             status: PlanStatus::from_str(&row.get::<_, String>(5)?),
             created_at: row.get(6)?,
+            completed_days: row.get(7)?,
         })
     }).map_err(|_| AppError::NotFound(format!("计划 ID {} 不存在", id)))
 }

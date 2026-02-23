@@ -59,6 +59,7 @@ export interface WritingPlan {
   total_days: number;
   status: PlanStatus;
   created_at?: string | null;
+  completed_days: number;
 }
 
 /** 计划每日条目 */

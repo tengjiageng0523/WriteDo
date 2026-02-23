@@ -5,6 +5,7 @@
       v-if="selectedPlanId"
       :planId="selectedPlanId"
       @back="goBackToList"
+      @startWriting="(task: any) => emit('startWriting', task)"
     />
 
     <!-- 列表视图 -->
@@ -46,7 +47,7 @@
           <div class="progress-bar">
             <div class="progress-fill" :style="{ width: progressPercent(plan) + '%' }"></div>
           </div>
-          <span class="progress-text">{{ plan.total_days }} 天计划</span>
+          <span class="progress-text">{{ plan.completed_days }}/{{ plan.total_days }} 天</span>
         </div>
         <div class="plan-meta">
           <span class="plan-date">{{ formatDate(plan.start_date) }} 开始</span>
@@ -165,6 +166,8 @@
 import { ref, onMounted } from 'vue'
 import type { WritingPlan } from '../../types'
 import PlanDetail from './PlanDetail.vue'
+
+const emit = defineEmits(['startWriting'])
 
 let api: any = null
 import { isTauri } from '../../utils/env'
@@ -363,7 +366,7 @@ const showToast = (msg: string) => {
 }
 
 const statusLabel = (s: string) => ({ active: '进行中', paused: '已暂停', completed: '已完成' }[s] || s)
-const progressPercent = (plan: WritingPlan) => plan.status === 'completed' ? 100 : Math.min(50, Math.random() * 60)
+const progressPercent = (plan: WritingPlan) => plan.total_days > 0 ? Math.round(plan.completed_days / plan.total_days * 100) : 0
 const formatDate = (d: string) => { const p = d.split('-'); return `${p[1]}/${p[2]}` }
 
 onMounted(loadPlans)
