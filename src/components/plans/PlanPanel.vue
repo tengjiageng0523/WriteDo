@@ -245,7 +245,7 @@ const doImport = async () => {
         plans.value.push({
           id: Date.now(), name: parsed.name || '导入计划', theme: parsed.theme || null,
           start_date: parsed.start_date || startDate.value,
-          total_days: parsed.days?.length || 0, status: 'active', created_at: null,
+          total_days: parsed.days?.length || 0, status: 'active', created_at: null, completed_days: 0,
         })
         showToast('计划导入成功')
       }
@@ -261,7 +261,7 @@ const doImport = async () => {
         plans.value.push({
           id: Date.now(), name, theme: null,
           start_date: startDate.value, total_days: dayCount || 1,
-          status: 'active', created_at: null,
+          status: 'active', created_at: null, completed_days: 0,
         })
         showToast('计划导入成功')
       }
