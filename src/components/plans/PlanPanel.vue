@@ -227,12 +227,6 @@ const loadPlans = async () => {
       console.warn('加载计划失败', e)
     }
   }
-  if (!plans.value.length && !isTauri) {
-    plans.value = [
-      { id: 1, name: '30天叙事写作训练', theme: '记叙与表达', start_date: startDate.value, total_days: 30, status: 'active', created_at: null },
-      { id: 2, name: '21天散文入门', theme: '散文基础', start_date: '2026-01-15', total_days: 21, status: 'completed', created_at: null },
-    ]
-  }
 }
 
 const doImport = async () => {

@@ -30,6 +30,20 @@ const editorRef = ref<InstanceType<typeof WritingEditor> | null>(null);
 const saveToast = ref('');
 const showRitual = ref(false);
 
+// 今日写作任务
+const todayWriting = ref<{ plan_name: string; plan_id: number; day_number: number; title: string; prompt: string; is_completed: boolean } | null>(null);
+
+const loadTodayWriting = async () => {
+  if (isTauri) {
+    try {
+      if (!apiModule) apiModule = await import('./api');
+      todayWriting.value = await apiModule.getTodayWriting();
+    } catch (e) {
+      console.warn('加载今日写作失败', e);
+    }
+  }
+};
+
 import { isTauri } from './utils/env';
 let apiModule: any = null;
 
@@ -60,7 +74,6 @@ const saveWriting = async () => {
       showSaveToast('保存失败');
     }
   } else {
-    // mock 模式
     showSaveToast(`已保存 (${charCount} 字·${Math.floor(duration / 60)}分钟)`);
   }
 };
@@ -181,23 +194,57 @@ const onResizeMove = (e: MouseEvent) => {
 };
 const onResizeEnd = () => { isDragging.value = false; };
 
-// === 全屏 ===
-const checkFullscreenStatus = () => { isFullscreen.value = !!document.fullscreenElement; };
+// === 沉浸模式（使用 Tauri Window API）===
+let tauriWindow: any = null;
+
+const checkFullscreenStatus = async () => {
+  if (isTauri) {
+    try {
+      if (!tauriWindow) {
+        const { getCurrentWebviewWindow } = await import('@tauri-apps/api/webviewWindow');
+        tauriWindow = getCurrentWebviewWindow();
+      }
+      isFullscreen.value = await tauriWindow.isFullscreen();
+    } catch {
+      isFullscreen.value = !!document.fullscreenElement;
+    }
+  } else {
+    isFullscreen.value = !!document.fullscreenElement;
+  }
+};
+
 const toggleImmersiveMode = async () => {
-  if (!document.fullscreenElement) {
-    // 先播放仪式感动画
+  if (!isFullscreen.value) {
     showRitual.value = true;
   } else {
-    await document.exitFullscreen().catch(() => {});
+    // 退出沉浸
+    if (isTauri && tauriWindow) {
+      await tauriWindow.setFullscreen(false);
+    } else {
+      await document.exitFullscreen().catch(() => {});
+    }
+    isFullscreen.value = false;
     isFocusMode.value = false;
     isTypewriterMode.value = false;
   }
 };
 
-// 仪式动画完成后进入全屏
 const onRitualComplete = async () => {
   showRitual.value = false;
-  await document.documentElement.requestFullscreen().catch(() => {});
+  if (isTauri) {
+    try {
+      if (!tauriWindow) {
+        const { getCurrentWebviewWindow } = await import('@tauri-apps/api/webviewWindow');
+        tauriWindow = getCurrentWebviewWindow();
+      }
+      await tauriWindow.setFullscreen(true);
+    } catch {
+      await document.documentElement.requestFullscreen().catch(() => {});
+    }
+  } else {
+    await document.documentElement.requestFullscreen().catch(() => {});
+  }
+  isFullscreen.value = true;
   isFocusMode.value = true;
   isTypewriterMode.value = true;
 };
@@ -212,6 +259,7 @@ onMounted(() => {
   document.addEventListener('mousemove', onResizeMove);
   document.addEventListener('mouseup', onResizeEnd);
   document.addEventListener('fullscreenchange', checkFullscreenStatus);
+  loadTodayWriting();
 });
 onBeforeUnmount(() => {
   document.removeEventListener('mousemove', onResizeMove);
@@ -268,7 +316,9 @@ onBeforeUnmount(() => {
         
         <header class="content-header">
           <div>
-            <p class="page-subtitle text-secondary">30天叙事写作训练 · 第 12 天</p>
+            <p class="page-subtitle text-secondary" v-if="todayWriting">
+              {{ todayWriting.plan_name }} · 第 {{ todayWriting.day_number }} 天
+            </p>
             <h1 class="page-title">今日写作</h1>
           </div>
           <button class="btn-primary flex items-center gap-2" @click="toggleImmersiveMode">
@@ -283,11 +333,14 @@ onBeforeUnmount(() => {
           </button>
         </header>
 
-        <section class="prompt-card">
-          <h2 class="prompt-title">一场雨中的故事</h2>
+        <section class="prompt-card" v-if="todayWriting">
+          <h2 class="prompt-title">{{ todayWriting.title }}</h2>
           <p class="prompt-desc text-secondary mt-2">
-            以下雨天为背景，写一个发生在你身上的真实故事。注意环境描写与情感表达的融合。试着还原雨滴的声音、空气的味道以及当时的内心波动。
+            {{ todayWriting.prompt }}
           </p>
+        </section>
+        <section class="prompt-card" v-else>
+          <p class="prompt-desc text-secondary">今日没有写作任务，自由书写吧！</p>
         </section>
 
         <WritingEditor 

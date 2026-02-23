@@ -222,15 +222,6 @@ const loadTasks = async () => {
       console.warn('无法加载任务（后端未启动？）', e)
     }
   }
-  // 开发模式 mock 数据
-  if (!tasks.value.length && !isTauri) {
-    tasks.value = [
-      { id: 1, title: '完成 Phase 2 任务管理面板', priority: 'high', due_date: todayStr.value, completed: false, created_at: null, updated_at: null },
-      { id: 2, title: '阅读《写作这回事》第三章', priority: 'medium', due_date: todayStr.value, completed: false, created_at: null, updated_at: null },
-      { id: 3, title: '整理新博文素材', priority: 'low', due_date: null, completed: false, created_at: null, updated_at: null },
-      { id: 4, title: '修复编辑器呼吸灯', priority: 'high', due_date: null, completed: true, created_at: null, updated_at: null },
-    ]
-  }
 
   // 请求通知权限并发送今日待办提醒
   await requestPermission()
@@ -363,18 +354,7 @@ const importTasks = async () => {
       tasks.value.unshift(...imported)
       showToast(`成功导入 ${imported.length} 个任务`)
     } else {
-      // mock 模式
-      const mockTasks = parsed.map((item: any, i: number) => ({
-        id: Date.now() + i,
-        title: item.title || '未命名任务',
-        priority: item.priority || 'medium',
-        due_date: item.due_date || null,
-        completed: false,
-        created_at: null,
-        updated_at: null,
-      }))
-      tasks.value.unshift(...mockTasks)
-      showToast(`成功导入 ${mockTasks.length} 个任务`)
+      showToast('后端未连接，无法导入')
     }
     importJson.value = ''
     showImportDialog.value = false

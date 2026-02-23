@@ -153,30 +153,6 @@ const loadData = async () => {
       }))
     } catch (e) { console.warn('加载统计失败', e) }
   }
-
-  // Mock 数据
-  if (!isTauri || stats.value.total_days === 0) {
-    stats.value = {
-      total_days: 18, total_words: 12450, total_duration: 32400,
-      current_streak: 5, max_streak: 12,
-      avg_words_per_session: 691, avg_duration_per_session: 1800,
-    }
-    // 生成 mock 热力图
-    const entries: HeatmapEntry[] = []
-    const now = new Date()
-    for (let i = 0; i < 365; i++) {
-      const d = new Date(now.getTime() - i * 86400000)
-      const ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-      const wordCount = Math.random() > 0.6 ? Math.floor(Math.random() * 2000) : 0
-      entries.push({ date: ds, word_count: wordCount, count: wordCount > 0 ? 1 : 0 })
-    }
-    heatmapData.value = entries
-
-    planProgress.value = [
-      { name: '30天叙事写作训练', completed: 12, total: 30, percent: 40, status: '进行中' },
-      { name: '21天散文入门', completed: 21, total: 21, percent: 100, status: '已完成' },
-    ]
-  }
 }
 
 // === 热力图计算 ===
